@@ -40,6 +40,24 @@ namespace Teliki.Tests
             Assert.AreEqual(1, renderer.BlankCount);
         }
 
+        [TestMethod]
+        public void Render_RendersProvidedSnapshotWithoutAdvancingPlaylist()
+        {
+            var playlist = new PlaylistService();
+            playlist.Replace(new PlaylistManifest(new[]
+            {
+                new CachedMediaItem("a.jpg", "a.jpg", MediaKind.Image),
+                new CachedMediaItem("b.jpg", "b.jpg", MediaKind.Image)
+            }));
+            var renderer = new RecordingMediaRenderer();
+            var coordinator = new DisplayCoordinator(playlist, new[] { renderer }, NullLogger.Instance);
+
+            coordinator.Render(new CachedMediaItem("snapshot.jpg", "snapshot.jpg", MediaKind.Image));
+            coordinator.Advance();
+
+            CollectionAssert.AreEqual(new[] { "snapshot.jpg", "a.jpg" }, renderer.RenderedPaths.ToArray());
+        }
+
         private sealed class RecordingMediaRenderer : IMediaRenderer
         {
             public readonly List<string> RenderedPaths = new List<string>();

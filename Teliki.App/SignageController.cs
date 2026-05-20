@@ -115,7 +115,9 @@ namespace Teliki.App
                     _currentConfig.MediaFolder,
                     (int)_currentConfig.Interval.TotalSeconds,
                     (int)_currentConfig.ScanInterval.TotalSeconds,
-                    (int)_currentConfig.ScanTimeout.TotalSeconds);
+                    (int)_currentConfig.ScanTimeout.TotalSeconds,
+                    _currentConfig.ScreenMode,
+                    _currentConfig.ScreenIndex);
             }
 
             return _configStore.Load(_configPath).GetEditableSettings();
@@ -209,11 +211,14 @@ namespace Teliki.App
             return true;
         }
 
-        public void CloseModalUi()
+        public void CloseModalUi(bool restoreFullscreen = true)
         {
             _settingsOpen = false;
             _modalUiOpen = false;
-            _runtime.RestoreFullscreen();
+            if (restoreFullscreen)
+            {
+                _runtime.RestoreFullscreen();
+            }
         }
 
         public void OnAdvanceTick()

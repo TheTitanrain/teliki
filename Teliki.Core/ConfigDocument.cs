@@ -35,7 +35,9 @@ namespace Teliki.Core
                 GetValue("MediaFolder", "media"),
                 GetInt("IntervalSeconds", 10),
                 GetInt("ScanIntervalSeconds", 5),
-                GetInt("ScanTimeoutSeconds", 30));
+                GetInt("ScanTimeoutSeconds", 30),
+                GetValue("ScreenMode", DisplayModeParser.AllScreens),
+                GetInt("ScreenIndex", 0));
         }
 
         public void SetEditableSettings(EditableSettings settings)
@@ -44,6 +46,8 @@ namespace Teliki.Core
             SetValue("IntervalSeconds", settings.IntervalSeconds.ToString(CultureInfo.InvariantCulture));
             SetValue("ScanIntervalSeconds", settings.ScanIntervalSeconds.ToString(CultureInfo.InvariantCulture));
             SetValue("ScanTimeoutSeconds", settings.ScanTimeoutSeconds.ToString(CultureInfo.InvariantCulture));
+            SetValue("ScreenMode", settings.ScreenMode);
+            SetValue("ScreenIndex", settings.ScreenIndex.ToString(CultureInfo.InvariantCulture));
         }
 
         public override string ToString()
@@ -75,14 +79,38 @@ namespace Teliki.Core
 
         private void SetValue(string key, string value)
         {
+            var lastMatch = -1;
             for (var index = 0; index < _lines.Count; index++)
             {
                 if (_lines[index].Kind == ConfigLineKind.KeyValue &&
                     string.Equals(_lines[index].Key, key, StringComparison.OrdinalIgnoreCase))
                 {
-                    _lines[index] = ConfigLine.KeyValue(key, value);
-                    return;
+                    lastMatch = index;
                 }
+            }
+
+            if (lastMatch >= 0)
+            {
+                _lines[lastMatch] = ConfigLine.KeyValue(key, value);
+                for (var index = _lines.Count - 1; index >= 0; index--)
+                {
+                    if (index == lastMatch)
+                    {
+                        continue;
+                    }
+
+                    if (_lines[index].Kind == ConfigLineKind.KeyValue &&
+                        string.Equals(_lines[index].Key, key, StringComparison.OrdinalIgnoreCase))
+                    {
+                        _lines.RemoveAt(index);
+                        if (index < lastMatch)
+                        {
+                            lastMatch--;
+                        }
+                    }
+                }
+
+                return;
             }
 
             if (_lines.Count > 0 && _lines[_lines.Count - 1].Raw.Length != 0)

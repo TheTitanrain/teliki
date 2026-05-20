@@ -21,7 +21,9 @@ namespace Teliki.Tests
             Assert.IsTrue(config.CacheFolder.EndsWith("CacheRoot\\Teliki", StringComparison.OrdinalIgnoreCase));
             Assert.AreEqual(1024, config.MaxCacheSizeMb);
             Assert.AreEqual(512, config.MinFreeDiskMb);
-            Assert.AreEqual("AllScreens", config.ScreenMode);
+            Assert.AreEqual(DisplayModeParser.AllScreens, config.ScreenMode);
+            Assert.AreEqual(DisplayTargetMode.AllScreens, config.DisplayMode);
+            Assert.AreEqual(0, config.ScreenIndex);
         }
 
         [TestMethod]
@@ -35,6 +37,26 @@ namespace Teliki.Tests
             Assert.AreEqual(TimeSpan.FromSeconds(1), config.ScanTimeout);
             Assert.AreEqual(1, config.MaxCacheSizeMb);
             Assert.AreEqual(0, config.MinFreeDiskMb);
+        }
+
+        [TestMethod]
+        public void LoadFromText_ParsesDisplayModeAndScreenIndex()
+        {
+            var config = ConfigLoader.LoadFromText("ScreenMode=SingleScreen\r\nScreenIndex=2");
+
+            Assert.AreEqual(DisplayModeParser.SingleScreen, config.ScreenMode);
+            Assert.AreEqual(DisplayTargetMode.SingleScreen, config.DisplayMode);
+            Assert.AreEqual(2, config.ScreenIndex);
+        }
+
+        [TestMethod]
+        public void LoadFromText_UnknownDisplayModeFallsBackToAllScreens()
+        {
+            var config = ConfigLoader.LoadFromText("ScreenMode=LegacyMode\r\nScreenIndex=3");
+
+            Assert.AreEqual("LegacyMode", config.ScreenMode);
+            Assert.AreEqual(DisplayTargetMode.AllScreens, config.DisplayMode);
+            Assert.AreEqual(3, config.ScreenIndex);
         }
     }
 }

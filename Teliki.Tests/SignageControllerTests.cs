@@ -85,7 +85,7 @@ namespace Teliki.Tests
 
             Assert.ThrowsExactly<InvalidOperationException>(delegate
             {
-                controller.SaveSettings(new EditableSettings("new-media", 20, 8, 32));
+                controller.SaveSettings(new EditableSettings("new-media", 20, 8, 32, DisplayModeParser.AllScreens, 0));
             });
 
             Assert.AreEqual("media", controller.CurrentConfig.MediaFolder);
@@ -117,7 +117,8 @@ namespace Teliki.Tests
                 "cache",
                 1024,
                 512,
-                "AllScreens");
+                DisplayModeParser.AllScreens,
+                0);
         }
 
         private sealed class TestControllerHarness

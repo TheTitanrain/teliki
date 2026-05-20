@@ -4,7 +4,7 @@ Teliki is a Windows digital signage player for fullscreen media playback on adve
 
 ## Behavior
 
-- Opens one borderless fullscreen topmost window for each connected monitor.
+- Opens borderless fullscreen topmost windows on the monitors selected by `ScreenMode`.
 - Uses the full screen bounds, including taskbar area.
 - Hides the cursor while media is displayed.
 - Opens a modal settings window with `F1`.
@@ -46,9 +46,19 @@ CacheFolder=%LocalAppData%\Teliki\MediaCache
 MaxCacheSizeMb=1024
 MinFreeDiskMb=512
 ScreenMode=AllScreens
+ScreenIndex=1
 ```
 
 `MediaFolder` can be a local folder or a UNC/network path. Relative paths are resolved from the application directory. Folder scanning is non-recursive in this version.
+
+Display selection:
+
+- `ScreenMode=AllScreens` shows content on every connected monitor.
+- `ScreenMode=PrimaryScreen` shows content only on the Windows primary monitor.
+- `ScreenMode=SingleScreen` shows content only on the monitor identified by `ScreenIndex`.
+- `ScreenIndex` is 1-based and follows the current `Screen.AllScreens` order on that machine.
+- If `ScreenMode=SingleScreen` points to an unavailable monitor, Teliki falls back to the primary monitor and logs a warning.
+- Reordering or reconnecting monitors in Windows can change monitor numbering, so `ScreenIndex` may need to be updated afterward.
 
 ## Settings UI
 
@@ -56,8 +66,9 @@ ScreenMode=AllScreens
 - Opening the settings dialog makes the mouse cursor visible until the dialog closes, including on multi-monitor playback setups.
 - `Esc` from a playback window closes the playback windows and terminates the process through a single coordinated shutdown request, even while several windows are closing at once.
 - `Esc` inside the settings dialog closes only the dialog.
-- The settings dialog edits `MediaFolder`, `IntervalSeconds`, `ScanIntervalSeconds`, and `ScanTimeoutSeconds`.
-- Saving applies the new values immediately without restarting the app.
+- The settings dialog edits `MediaFolder`, `IntervalSeconds`, `ScanIntervalSeconds`, `ScanTimeoutSeconds`, `ScreenMode`, and the monitor used by `ScreenIndex`.
+- Switching to `SingleScreen` enables a monitor selector with labels like `1. Primary, 1920x1080 (0,0)`.
+- Saving applies timing and folder changes immediately. Display-target changes are applied as soon as the settings dialog closes, without restarting the app.
 
 The dialog writes to the deployed `appsettings.ini` next to `Teliki.App.exe`. The account running the app must have write permission to that file and directory. If the write fails, the dialog stays open and the running configuration is unchanged.
 

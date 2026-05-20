@@ -20,7 +20,8 @@ namespace Teliki.Core
                 NormalizePath(config.CacheFolder, baseDirectory),
                 config.MaxCacheSizeMb,
                 config.MinFreeDiskMb,
-                config.ScreenMode);
+                config.ScreenMode,
+                config.ScreenIndex);
         }
 
         private static string NormalizePath(string path, string baseDirectory)

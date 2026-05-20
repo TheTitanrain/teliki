@@ -26,7 +26,8 @@ namespace Teliki.Core
                 Expand(Get(values, "CacheFolder", defaultCache)),
                 Math.Max(1, GetInt(values, "MaxCacheSizeMb", 1024)),
                 Math.Max(0, GetInt(values, "MinFreeDiskMb", 512)),
-                Get(values, "ScreenMode", "AllScreens"));
+                Get(values, "ScreenMode", DisplayModeParser.AllScreens),
+                GetInt(values, "ScreenIndex", 0));
         }
 
         private static Dictionary<string, string> Parse(string text)

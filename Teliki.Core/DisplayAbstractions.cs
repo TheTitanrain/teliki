@@ -23,14 +23,30 @@ namespace Teliki.Core
 
     public sealed class DisplayScreen
     {
+        public int Index { get; private set; }
         public int X { get; private set; }
         public int Y { get; private set; }
         public int Width { get; private set; }
         public int Height { get; private set; }
         public bool Primary { get; private set; }
-
-        public DisplayScreen(int x, int y, int width, int height, bool primary)
+        public string DisplayLabel
         {
+            get
+            {
+                return string.Format(
+                    "{0}. {1}{2}x{3} ({4},{5})",
+                    Index,
+                    Primary ? "Primary, " : string.Empty,
+                    Width,
+                    Height,
+                    X,
+                    Y);
+            }
+        }
+
+        public DisplayScreen(int index, int x, int y, int width, int height, bool primary)
+        {
+            Index = index;
             X = x;
             Y = y;
             Width = width;
@@ -52,9 +68,15 @@ namespace Teliki.Core
             _logger = logger;
         }
 
-        public void Advance()
+        public CachedMediaItem Advance()
         {
             var item = _playlist.Next();
+            Render(item);
+            return item;
+        }
+
+        public void Render(CachedMediaItem item)
+        {
             foreach (var renderer in _renderers)
             {
                 try

@@ -10,7 +10,8 @@ namespace Teliki.App
     {
         private readonly ILogger _logger;
         private readonly PlaylistService _playlist;
-        private readonly DisplayCoordinator _displayCoordinator;
+        private readonly IScreenProvider _screenProvider;
+        private readonly Control _uiDispatcher = new Control();
         private readonly List<DisplayForm> _forms = new List<DisplayForm>();
         private readonly Timer _advanceTimer = new Timer();
         private readonly Timer _scanTimer = new Timer();
@@ -18,24 +19,20 @@ namespace Teliki.App
         private readonly BackgroundScanRunner _scanRunner;
         private readonly SignageController _controller;
         private readonly ApplicationShutdownCoordinator _shutdownCoordinator = new ApplicationShutdownCoordinator();
+        private DisplayCoordinator _displayCoordinator;
+        private CachedMediaItem _currentItemSnapshot;
+        private bool _rebuildingDisplays;
+        private bool _pendingDisplayRefresh;
 
         public SignageApplicationContext(AppConfig config, ILogger logger, string configPath, string baseDirectory)
         {
             _logger = logger;
             _playlist = new PlaylistService();
+            _screenProvider = new WindowsScreenProvider();
+            var ignore = _uiDispatcher.Handle;
             var scanner = new MediaScanner(new PhysicalFileSystem(), logger);
             var cache = new MediaCache(new PhysicalFileSystem(), logger);
             _scanRunner = new BackgroundScanRunner(scanner, cache, logger);
-
-            var screenProvider = new WindowsScreenProvider();
-            foreach (var screen in screenProvider.GetScreens())
-            {
-                var form = new DisplayForm(screen, logger, this);
-                form.FormClosed += OnFormClosed;
-                _forms.Add(form);
-            }
-
-            _displayCoordinator = new DisplayCoordinator(_playlist, _forms.ToArray(), logger);
             _controller = new SignageController(
                 config,
                 this,
@@ -50,12 +47,7 @@ namespace Teliki.App
             ConfigureTimers();
             SystemEvents.DisplaySettingsChanged += OnDisplaySettingsChanged;
             _scanRunner.ScanCompleted += OnScanCompleted;
-
-            foreach (var form in _forms)
-            {
-                form.Show();
-                form.RestoreFullscreen();
-            }
+            RebuildDisplayForms(config, false);
 
             _controller.StartRuntime();
         }
@@ -69,6 +61,7 @@ namespace Teliki.App
                 _advanceTimer.Dispose();
                 _scanTimer.Dispose();
                 _watchdogTimer.Dispose();
+                _uiDispatcher.Dispose();
                 foreach (var form in _forms)
                 {
                     form.FormClosed -= OnFormClosed;
@@ -88,12 +81,12 @@ namespace Teliki.App
 
         private void BeginInvokeOnUi(Action action)
         {
-            if (_forms.Count == 0 || _forms[0].IsDisposed)
+            if (_uiDispatcher.IsDisposed || !_uiDispatcher.IsHandleCreated)
             {
                 return;
             }
 
-            _forms[0].BeginInvoke(action);
+            _uiDispatcher.BeginInvoke(action);
         }
 
         private void OnScanCompleted(ScanCompletion completion)
@@ -103,17 +96,18 @@ namespace Teliki.App
 
         private void OnDisplaySettingsChanged(object sender, EventArgs e)
         {
-            _controller.OnWatchdogTick();
+            BeginInvokeOnUi(HandleDisplaySettingsChanged);
         }
 
         public void ApplyPlaylist(PlaylistManifest manifest)
         {
+            _currentItemSnapshot = null;
             _playlist.Replace(manifest);
         }
 
         public void AdvancePlayback()
         {
-            _displayCoordinator.Advance();
+            _currentItemSnapshot = _displayCoordinator.Advance();
         }
 
         public void RestoreFullscreen()
@@ -157,15 +151,25 @@ namespace Teliki.App
                 return;
             }
 
+            var displayRebuildRequested = false;
             try
             {
+                var availableScreens = _screenProvider.GetScreens();
+                var initialSettings = NormalizeSettingsForForm(_controller.LoadEditableSettings(), availableScreens);
                 using (var form = new SettingsForm(
-                           _controller.LoadEditableSettings(),
+                           initialSettings,
+                           availableScreens,
                            delegate(EditableSettings settings)
                            {
                                try
                                {
+                                   var previousConfig = _controller.CurrentConfig;
                                    _controller.SaveSettings(settings);
+                                   if (HasDisplaySettingsChanged(previousConfig, _controller.CurrentConfig))
+                                   {
+                                       displayRebuildRequested = true;
+                                   }
+
                                    return true;
                                }
                                catch (Exception ex)
@@ -186,12 +190,23 @@ namespace Teliki.App
             }
             finally
             {
-                _controller.CloseModalUi();
+                var shouldRebuild = displayRebuildRequested || _pendingDisplayRefresh;
+                _controller.CloseModalUi(!shouldRebuild);
+                if (shouldRebuild)
+                {
+                    _pendingDisplayRefresh = false;
+                    RebuildDisplayForms(_controller.CurrentConfig, true);
+                }
             }
         }
 
         private void OnFormClosed(object sender, FormClosedEventArgs e)
         {
+            if (_rebuildingDisplays)
+            {
+                return;
+            }
+
             var remainingOpenForms = 0;
             foreach (var form in _forms)
             {
@@ -205,6 +220,125 @@ namespace Teliki.App
             {
                 ExitThread();
             }
+        }
+
+        private void HandleDisplaySettingsChanged()
+        {
+            if (!ArePlaybackHotkeysEnabled)
+            {
+                _pendingDisplayRefresh = true;
+                return;
+            }
+
+            RebuildDisplayForms(_controller.CurrentConfig, true);
+        }
+
+        private void RebuildDisplayForms(AppConfig config, bool renderCurrentItem)
+        {
+            var selection = DisplayScreenSelector.SelectScreens(config, _screenProvider.GetScreens());
+            if (selection.UsedFallback && !string.IsNullOrEmpty(selection.Warning))
+            {
+                _logger.Warn(selection.Warning);
+            }
+
+            var previousForms = _forms.ToArray();
+            var nextForms = new List<DisplayForm>();
+            foreach (var screen in selection.Screens)
+            {
+                var form = new DisplayForm(screen, _logger, this);
+                form.FormClosed += OnFormClosed;
+                nextForms.Add(form);
+            }
+
+            foreach (var form in nextForms)
+            {
+                form.Show();
+                form.RestoreFullscreen();
+            }
+
+            _forms.Clear();
+            _forms.AddRange(nextForms);
+            _displayCoordinator = new DisplayCoordinator(_playlist, nextForms.ToArray(), _logger);
+            if (renderCurrentItem)
+            {
+                _displayCoordinator.Render(_currentItemSnapshot);
+            }
+
+            _rebuildingDisplays = true;
+            try
+            {
+                foreach (var form in previousForms)
+                {
+                    form.FormClosed -= OnFormClosed;
+                    if (!form.IsDisposed)
+                    {
+                        form.Close();
+                    }
+                    else
+                    {
+                        form.Dispose();
+                    }
+                }
+            }
+            finally
+            {
+                _rebuildingDisplays = false;
+            }
+        }
+
+        private static bool HasDisplaySettingsChanged(AppConfig previousConfig, AppConfig nextConfig)
+        {
+            return previousConfig.DisplayMode != nextConfig.DisplayMode ||
+                   previousConfig.ScreenIndex != nextConfig.ScreenIndex;
+        }
+
+        private static EditableSettings NormalizeSettingsForForm(EditableSettings settings, IReadOnlyList<DisplayScreen> screens)
+        {
+            var screenIndex = settings.ScreenIndex;
+            if (screens.Count > 0)
+            {
+                if (screenIndex < 1)
+                {
+                    var fallback = screens[0];
+                    foreach (var screen in screens)
+                    {
+                        if (screen.Primary)
+                        {
+                            fallback = screen;
+                            break;
+                        }
+                    }
+
+                    screenIndex = fallback.Index;
+                }
+
+                if (DisplayModeParser.Parse(settings.ScreenMode) == DisplayTargetMode.SingleScreen)
+                {
+                    var config = new AppConfig(
+                        settings.MediaFolder,
+                        TimeSpan.FromSeconds(settings.IntervalSeconds),
+                        TimeSpan.FromSeconds(settings.ScanIntervalSeconds),
+                        TimeSpan.FromSeconds(settings.ScanTimeoutSeconds),
+                        string.Empty,
+                        1,
+                        0,
+                        settings.ScreenMode,
+                        screenIndex);
+                    var selection = DisplayScreenSelector.SelectScreens(config, screens);
+                    if (selection.Screens.Count > 0)
+                    {
+                        screenIndex = selection.Screens[0].Index;
+                    }
+                }
+            }
+
+            return new EditableSettings(
+                settings.MediaFolder,
+                settings.IntervalSeconds,
+                settings.ScanIntervalSeconds,
+                settings.ScanTimeoutSeconds,
+                DisplayModeParser.Canonicalize(settings.ScreenMode),
+                screenIndex);
         }
     }
 }
