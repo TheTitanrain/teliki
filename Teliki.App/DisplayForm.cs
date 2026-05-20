@@ -28,8 +28,7 @@ namespace Teliki.App
             WindowState = FormWindowState.Normal;
             TopMost = true;
             BackColor = Color.Black;
-            Cursor.Hide();
-
+            CursorVisibilityManager.Shared.HideForPlayback();
             _pictureBox.Dock = DockStyle.Fill;
             _pictureBox.BackColor = Color.Black;
             _pictureBox.SizeMode = PictureBoxSizeMode.Zoom;

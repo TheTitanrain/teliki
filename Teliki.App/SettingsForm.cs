@@ -18,6 +18,7 @@ namespace Teliki.App
         private readonly Button _cancelButton = new Button();
         private readonly Button _exitButton = new Button();
         private readonly Button _browseButton = new Button();
+        private readonly IDisposable _cursorScope;
         private bool _dirty;
 
         public SettingsForm(EditableSettings settings, Func<EditableSettings, bool> saveHandler, Func<bool> exitHandler)
@@ -33,6 +34,7 @@ namespace Teliki.App
             ShowInTaskbar = false;
             Width = 520;
             Height = 260;
+            _cursorScope = CursorVisibilityManager.Shared.ShowCursorWhileModalUiOpen();
 
             ConfigureControls(settings);
             Controls.Add(BuildLayout());
@@ -42,6 +44,16 @@ namespace Teliki.App
         }
 
         public bool ExitApplicationRequested { get; private set; }
+
+        protected override void Dispose(bool disposing)
+        {
+            if (disposing)
+            {
+                _cursorScope.Dispose();
+            }
+
+            base.Dispose(disposing);
+        }
 
         private void ConfigureControls(EditableSettings settings)
         {
