@@ -16,7 +16,7 @@ namespace Teliki.App
             var baseDirectory = AppDomain.CurrentDomain.BaseDirectory;
             var configPath = Path.Combine(baseDirectory, "appsettings.ini");
             var config = ConfigLoader.Load(configPath);
-            config = NormalizePaths(config, baseDirectory);
+            config = AppConfigNormalizer.Normalize(config, baseDirectory);
 
             var logPath = Path.Combine(
                 Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
@@ -25,25 +25,7 @@ namespace Teliki.App
                 "teliki.log");
             var logger = new FileLogger(logPath);
 
-            Application.Run(new SignageApplicationContext(config, logger));
-        }
-
-        private static AppConfig NormalizePaths(AppConfig config, string baseDirectory)
-        {
-            return new AppConfig(
-                NormalizePath(config.MediaFolder, baseDirectory),
-                config.Interval,
-                config.ScanInterval,
-                config.ScanTimeout,
-                NormalizePath(config.CacheFolder, baseDirectory),
-                config.MaxCacheSizeMb,
-                config.MinFreeDiskMb,
-                config.ScreenMode);
-        }
-
-        private static string NormalizePath(string path, string baseDirectory)
-        {
-            return Path.IsPathRooted(path) ? path : Path.GetFullPath(Path.Combine(baseDirectory, path));
+            Application.Run(new SignageApplicationContext(config, logger, configPath, baseDirectory));
         }
     }
 }

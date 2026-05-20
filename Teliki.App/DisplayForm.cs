@@ -9,6 +9,7 @@ namespace Teliki.App
 {
     internal sealed class DisplayForm : Form, IMediaRenderer
     {
+        private readonly IDisplayCommandTarget _commandTarget;
         private readonly DisplayScreen _screen;
         private readonly ILogger _logger;
         private readonly PictureBox _pictureBox = new PictureBox();
@@ -16,8 +17,9 @@ namespace Teliki.App
         private Image _currentImage;
         private MemoryStream _currentImageStream;
 
-        public DisplayForm(DisplayScreen screen, ILogger logger)
+        public DisplayForm(DisplayScreen screen, ILogger logger, IDisplayCommandTarget commandTarget)
         {
+            _commandTarget = commandTarget;
             _screen = screen;
             _logger = logger;
 
@@ -90,6 +92,26 @@ namespace Teliki.App
             }
 
             base.Dispose(disposing);
+        }
+
+        protected override bool ProcessCmdKey(ref Message msg, Keys keyData)
+        {
+            if (_commandTarget != null && _commandTarget.ArePlaybackHotkeysEnabled)
+            {
+                if (keyData == Keys.F1)
+                {
+                    _commandTarget.OpenSettings(this);
+                    return true;
+                }
+
+                if (keyData == Keys.Escape)
+                {
+                    _commandTarget.ExitApplication();
+                    return true;
+                }
+            }
+
+            return base.ProcessCmdKey(ref msg, keyData);
         }
 
         private void RenderImage(string path)
@@ -172,6 +194,13 @@ namespace Teliki.App
                 previousStream.Dispose();
             }
         }
+    }
+
+    internal interface IDisplayCommandTarget
+    {
+        bool ArePlaybackHotkeysEnabled { get; }
+        void OpenSettings(DisplayForm owner);
+        void ExitApplication();
     }
 
     internal sealed class WmpHost : AxHost

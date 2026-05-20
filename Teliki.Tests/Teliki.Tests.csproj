@@ -12,5 +12,6 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Teliki.Core\Teliki.Core.csproj" />
+    <ProjectReference Include="..\Teliki.App\Teliki.App.csproj" />
   </ItemGroup>
 </Project>

@@ -7,6 +7,8 @@ Teliki is a Windows digital signage player for fullscreen media playback on adve
 - Opens one borderless fullscreen topmost window for each connected monitor.
 - Uses the full screen bounds, including taskbar area.
 - Hides the cursor while media is displayed.
+- Opens a modal settings window with `F1`.
+- Exits the playback app with `Esc` when a playback window has focus.
 - Cycles media by `IntervalSeconds`.
 - Polls the configured source folder by `ScanIntervalSeconds`.
 - Plays only from a local cache. Source files are never rendered directly.
@@ -47,6 +49,16 @@ ScreenMode=AllScreens
 ```
 
 `MediaFolder` can be a local folder or a UNC/network path. Relative paths are resolved from the application directory. Folder scanning is non-recursive in this version.
+
+## Settings UI
+
+- `F1` from a playback window opens the settings dialog on that screen.
+- `Esc` from a playback window exits the application.
+- `Esc` inside the settings dialog closes only the dialog.
+- The settings dialog edits `MediaFolder`, `IntervalSeconds`, `ScanIntervalSeconds`, and `ScanTimeoutSeconds`.
+- Saving applies the new values immediately without restarting the app.
+
+The dialog writes to the deployed `appsettings.ini` next to `Teliki.App.exe`. The account running the app must have write permission to that file and directory. If the write fails, the dialog stays open and the running configuration is unchanged.
 
 ## Cache And Logs
 
@@ -98,7 +110,6 @@ The app does not install autostart entries in this version. Configure Windows st
 
 ## Version 1 Limits
 
-- No settings UI.
 - No installer or autostart setup.
 - No hard keyboard blocking.
 - No per-screen media folders.

@@ -14,6 +14,7 @@ namespace Teliki.Core
         Stream OpenRead(string path);
         Stream CreateFile(string path);
         void MoveFile(string sourcePath, string destinationPath);
+        void ReplaceFile(string sourcePath, string destinationPath);
         void DeleteFile(string path);
         long GetAvailableFreeSpace(string path);
     }
@@ -61,6 +62,28 @@ namespace Teliki.Core
             if (File.Exists(destinationPath))
             {
                 File.Delete(destinationPath);
+            }
+
+            File.Move(sourcePath, destinationPath);
+        }
+
+        public void ReplaceFile(string sourcePath, string destinationPath)
+        {
+            if (File.Exists(destinationPath))
+            {
+                var backupPath = destinationPath + ".bak";
+                if (File.Exists(backupPath))
+                {
+                    File.Delete(backupPath);
+                }
+
+                File.Replace(sourcePath, destinationPath, backupPath, true);
+                if (File.Exists(backupPath))
+                {
+                    File.Delete(backupPath);
+                }
+
+                return;
             }
 
             File.Move(sourcePath, destinationPath);

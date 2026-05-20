@@ -1,48 +1,54 @@
 using System;
 using System.Collections.Generic;
-using System.Drawing;
-using System.Threading.Tasks;
 using System.Windows.Forms;
 using Microsoft.Win32;
 using Teliki.Core;
 
 namespace Teliki.App
 {
-    internal sealed class SignageApplicationContext : ApplicationContext
+    internal sealed class SignageApplicationContext : ApplicationContext, ISignageRuntime, IDisplayCommandTarget
     {
-        private readonly AppConfig _config;
         private readonly ILogger _logger;
-        private readonly MediaScanner _scanner;
-        private readonly MediaCache _cache;
         private readonly PlaylistService _playlist;
         private readonly DisplayCoordinator _displayCoordinator;
         private readonly List<DisplayForm> _forms = new List<DisplayForm>();
         private readonly Timer _advanceTimer = new Timer();
         private readonly Timer _scanTimer = new Timer();
         private readonly Timer _watchdogTimer = new Timer();
-        private readonly object _scanSync = new object();
-        private DateTime _scanStartedUtc;
-        private bool _scanRunning;
+        private readonly BackgroundScanRunner _scanRunner;
+        private readonly SignageController _controller;
 
-        public SignageApplicationContext(AppConfig config, ILogger logger)
+        public SignageApplicationContext(AppConfig config, ILogger logger, string configPath, string baseDirectory)
         {
-            _config = config;
             _logger = logger;
-            _scanner = new MediaScanner(new PhysicalFileSystem(), logger);
-            _cache = new MediaCache(new PhysicalFileSystem(), logger);
             _playlist = new PlaylistService();
+            var scanner = new MediaScanner(new PhysicalFileSystem(), logger);
+            var cache = new MediaCache(new PhysicalFileSystem(), logger);
+            _scanRunner = new BackgroundScanRunner(scanner, cache, logger);
 
             var screenProvider = new WindowsScreenProvider();
             foreach (var screen in screenProvider.GetScreens())
             {
-                var form = new DisplayForm(screen, logger);
+                var form = new DisplayForm(screen, logger, this);
                 form.FormClosed += OnFormClosed;
                 _forms.Add(form);
             }
 
             _displayCoordinator = new DisplayCoordinator(_playlist, _forms.ToArray(), logger);
+            _controller = new SignageController(
+                config,
+                this,
+                _scanRunner,
+                new WinFormsTimerAdapter(_advanceTimer),
+                new WinFormsTimerAdapter(_scanTimer),
+                new WinFormsTimerAdapter(_watchdogTimer),
+                logger,
+                new ConfigFileStore(new PhysicalFileSystem()),
+                configPath,
+                baseDirectory);
             ConfigureTimers();
             SystemEvents.DisplaySettingsChanged += OnDisplaySettingsChanged;
+            _scanRunner.ScanCompleted += OnScanCompleted;
 
             foreach (var form in _forms)
             {
@@ -50,10 +56,7 @@ namespace Teliki.App
                 form.RestoreFullscreen();
             }
 
-            StartScanIfPossible();
-            _advanceTimer.Start();
-            _scanTimer.Start();
-            _watchdogTimer.Start();
+            _controller.StartRuntime();
         }
 
         protected override void Dispose(bool disposing)
@@ -61,6 +64,7 @@ namespace Teliki.App
             if (disposing)
             {
                 SystemEvents.DisplaySettingsChanged -= OnDisplaySettingsChanged;
+                _scanRunner.ScanCompleted -= OnScanCompleted;
                 _advanceTimer.Dispose();
                 _scanTimer.Dispose();
                 _watchdogTimer.Dispose();
@@ -76,66 +80,9 @@ namespace Teliki.App
 
         private void ConfigureTimers()
         {
-            _advanceTimer.Interval = ToTimerInterval(_config.Interval);
-            _advanceTimer.Tick += delegate { _displayCoordinator.Advance(); };
-
-            _scanTimer.Interval = ToTimerInterval(_config.ScanInterval);
-            _scanTimer.Tick += delegate { StartScanIfPossible(); };
-
-            _watchdogTimer.Interval = 1000;
-            _watchdogTimer.Tick += delegate { RestoreAllForms(); };
-        }
-
-        private static int ToTimerInterval(TimeSpan value)
-        {
-            return Math.Max(1, (int)Math.Min(int.MaxValue, value.TotalMilliseconds));
-        }
-
-        private void StartScanIfPossible()
-        {
-            lock (_scanSync)
-            {
-                if (_scanRunning)
-                {
-                    if (DateTime.UtcNow - _scanStartedUtc > _config.ScanTimeout)
-                    {
-                        _logger.Warn("Media scan exceeded timeout. Keeping current playlist and skipping overlapping scan.");
-                    }
-
-                    return;
-                }
-
-                _scanRunning = true;
-                _scanStartedUtc = DateTime.UtcNow;
-            }
-
-            Task.Run(delegate
-            {
-                try
-                {
-                    var result = _scanner.Scan(_config.MediaFolder);
-                    var manifest = _cache.Promote(
-                        result,
-                        _config.CacheFolder,
-                        CacheSettings.FromMegabytes(_config.MaxCacheSizeMb, _config.MinFreeDiskMb));
-                    BeginInvokeOnUi(delegate
-                    {
-                        _playlist.Replace(manifest);
-                        _displayCoordinator.Advance();
-                    });
-                }
-                catch (Exception ex)
-                {
-                    _logger.Error("Background scan failed.", ex);
-                }
-                finally
-                {
-                    lock (_scanSync)
-                    {
-                        _scanRunning = false;
-                    }
-                }
-            });
+            _advanceTimer.Tick += delegate { _controller.OnAdvanceTick(); };
+            _scanTimer.Tick += delegate { _controller.OnScanTick(); };
+            _watchdogTimer.Tick += delegate { _controller.OnWatchdogTick(); };
         }
 
         private void BeginInvokeOnUi(Action action)
@@ -148,12 +95,27 @@ namespace Teliki.App
             _forms[0].BeginInvoke(action);
         }
 
-        private void OnDisplaySettingsChanged(object sender, EventArgs e)
+        private void OnScanCompleted(ScanCompletion completion)
         {
-            RestoreAllForms();
+            BeginInvokeOnUi(delegate { _controller.OnScanCompleted(completion); });
         }
 
-        private void RestoreAllForms()
+        private void OnDisplaySettingsChanged(object sender, EventArgs e)
+        {
+            _controller.OnWatchdogTick();
+        }
+
+        public void ApplyPlaylist(PlaylistManifest manifest)
+        {
+            _playlist.Replace(manifest);
+        }
+
+        public void AdvancePlayback()
+        {
+            _displayCoordinator.Advance();
+        }
+
+        public void RestoreFullscreen()
         {
             foreach (var form in _forms)
             {
@@ -161,6 +123,62 @@ namespace Teliki.App
                 {
                     form.RestoreFullscreen();
                 }
+            }
+        }
+
+        public void ExitApplication()
+        {
+            foreach (var form in _forms)
+            {
+                if (!form.IsDisposed)
+                {
+                    form.Close();
+                }
+            }
+        }
+
+        public bool ArePlaybackHotkeysEnabled
+        {
+            get { return _controller.ArePlaybackHotkeysEnabled; }
+        }
+
+        public void OpenSettings(DisplayForm owner)
+        {
+            if (!_controller.TryOpenSettings())
+            {
+                return;
+            }
+
+            try
+            {
+                using (var form = new SettingsForm(
+                           _controller.LoadEditableSettings(),
+                           delegate(EditableSettings settings)
+                           {
+                               try
+                               {
+                                   _controller.SaveSettings(settings);
+                                   return true;
+                               }
+                               catch (Exception ex)
+                               {
+                                   _logger.Error("Failed to save settings.", ex);
+                                   MessageBox.Show(owner, ex.Message, "Save failed", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                                   return false;
+                               }
+                           },
+                           delegate
+                           {
+                               _controller.ExitApplication();
+                               return true;
+                           }))
+                {
+                    form.ShowDialog(owner);
+                }
+            }
+            finally
+            {
+                _controller.CloseModalUi();
             }
         }
 
