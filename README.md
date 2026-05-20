@@ -66,8 +66,9 @@ Display selection:
 - Opening the settings dialog makes the mouse cursor visible until the dialog closes, including on multi-monitor playback setups.
 - `Esc` from a playback window closes the playback windows and terminates the process through a single coordinated shutdown request, even while several windows are closing at once.
 - `Esc` inside the settings dialog closes only the dialog.
-- The settings dialog edits `MediaFolder`, `IntervalSeconds`, `ScanIntervalSeconds`, `ScanTimeoutSeconds`, `ScreenMode`, and the monitor used by `ScreenIndex`.
-- Switching to `SingleScreen` enables a monitor selector with labels like `1. Primary, 1920x1080 (0,0)`.
+- The settings dialog edits `Media folder`, `Playback interval (sec)`, `Scan interval (sec)`, `Scan timeout (sec)`, `Display mode`, and the `Target screen` used by `ScreenIndex`.
+- `Target screen` is used only when `Display mode` is set to `Single monitor`.
+- Switching to `SingleScreen` enables the target-screen selector with labels like `1. Primary, 1920x1080 (0,0)`.
 - Saving applies timing and folder changes immediately. Display-target changes are applied as soon as the settings dialog closes, without restarting the app.
 
 The dialog writes to the deployed `appsettings.ini` next to `Teliki.App.exe`. The account running the app must have write permission to that file and directory. If the write fails, the dialog stays open and the running configuration is unchanged.
