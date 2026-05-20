@@ -17,6 +17,7 @@ namespace Teliki.App
         private readonly Timer _watchdogTimer = new Timer();
         private readonly BackgroundScanRunner _scanRunner;
         private readonly SignageController _controller;
+        private readonly ApplicationShutdownCoordinator _shutdownCoordinator = new ApplicationShutdownCoordinator();
 
         public SignageApplicationContext(AppConfig config, ILogger logger, string configPath, string baseDirectory)
         {
@@ -128,6 +129,11 @@ namespace Teliki.App
 
         public void ExitApplication()
         {
+            if (!_shutdownCoordinator.RequestExit())
+            {
+                return;
+            }
+
             foreach (var form in _forms)
             {
                 if (!form.IsDisposed)
@@ -135,6 +141,8 @@ namespace Teliki.App
                     form.Close();
                 }
             }
+
+            ExitThread();
         }
 
         public bool ArePlaybackHotkeysEnabled
@@ -168,10 +176,10 @@ namespace Teliki.App
                                }
                            },
                            delegate
-                           {
-                               _controller.ExitApplication();
-                               return true;
-                           }))
+                            {
+                                _controller.ExitApplication();
+                                return true;
+                            }))
                 {
                     form.ShowDialog(owner);
                 }
@@ -184,13 +192,16 @@ namespace Teliki.App
 
         private void OnFormClosed(object sender, FormClosedEventArgs e)
         {
-            var allClosed = true;
+            var remainingOpenForms = 0;
             foreach (var form in _forms)
             {
-                allClosed &= form.IsDisposed;
+                if (!ReferenceEquals(form, sender) && !form.IsDisposed)
+                {
+                    remainingOpenForms++;
+                }
             }
 
-            if (allClosed)
+            if (_shutdownCoordinator.ShouldExitThreadAfterFormClosed(remainingOpenForms))
             {
                 ExitThread();
             }

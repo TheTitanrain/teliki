@@ -54,7 +54,7 @@ ScreenMode=AllScreens
 
 - `F1` from a playback window opens the settings dialog on that screen.
 - Opening the settings dialog makes the mouse cursor visible until the dialog closes, including on multi-monitor playback setups.
-- `Esc` from a playback window closes the playback windows and terminates the process.
+- `Esc` from a playback window closes the playback windows and terminates the process through a single coordinated shutdown request, even while several windows are closing at once.
 - `Esc` inside the settings dialog closes only the dialog.
 - The settings dialog edits `MediaFolder`, `IntervalSeconds`, `ScanIntervalSeconds`, and `ScanTimeoutSeconds`.
 - Saving applies the new values immediately without restarting the app.
