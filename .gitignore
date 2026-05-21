@@ -10,3 +10,6 @@ logs/
 MediaCache/
 cache/
 Teliki.App/media/
+
+# Brainstorming session files
+.superpowers/
