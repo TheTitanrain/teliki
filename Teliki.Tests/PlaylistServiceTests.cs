@@ -41,6 +41,48 @@ namespace Teliki.Tests
         }
 
         [TestMethod]
+        public void Replace_WithSameOriginalNames_PreservesPlaybackPosition()
+        {
+            var playlist = new PlaylistService();
+            playlist.Replace(new PlaylistManifest(new[]
+            {
+                new CachedMediaItem("a1", "a.jpg", MediaKind.Image),
+                new CachedMediaItem("b1", "b.jpg", MediaKind.Image)
+            }));
+            playlist.Next();
+            playlist.Next();
+
+            playlist.Replace(new PlaylistManifest(new[]
+            {
+                new CachedMediaItem("a2", "a.jpg", MediaKind.Image),
+                new CachedMediaItem("b2", "b.jpg", MediaKind.Image)
+            }));
+
+            Assert.AreEqual("a2", playlist.Next().CachedPath);
+        }
+
+        [TestMethod]
+        public void Replace_WithDifferentNames_ResetsPosition()
+        {
+            var playlist = new PlaylistService();
+            playlist.Replace(new PlaylistManifest(new[]
+            {
+                new CachedMediaItem("a", "a.jpg", MediaKind.Image),
+                new CachedMediaItem("b", "b.jpg", MediaKind.Image)
+            }));
+            playlist.Next();
+            playlist.Next();
+
+            playlist.Replace(new PlaylistManifest(new[]
+            {
+                new CachedMediaItem("c", "c.jpg", MediaKind.Image),
+                new CachedMediaItem("d", "d.jpg", MediaKind.Image)
+            }));
+
+            Assert.AreEqual("c", playlist.Next().CachedPath);
+        }
+
+        [TestMethod]
         public void ReportFailure_QuarantinesItemAfterThreeFailures()
         {
             var playlist = new PlaylistService();

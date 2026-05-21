@@ -21,9 +21,34 @@ namespace Teliki.Core
 
             lock (_sync)
             {
-                _items = manifest.Items.ToList();
+                var newItems = manifest.Items.ToList();
+                if (IsSameContent(newItems))
+                {
+                    _items = newItems;
+                    return;
+                }
+
+                _items = newItems;
                 _index = -1;
             }
+        }
+
+        private bool IsSameContent(List<CachedMediaItem> newItems)
+        {
+            if (newItems.Count != _items.Count || newItems.Count == 0)
+            {
+                return false;
+            }
+
+            for (var i = 0; i < newItems.Count; i++)
+            {
+                if (!string.Equals(newItems[i].OriginalName, _items[i].OriginalName, StringComparison.OrdinalIgnoreCase))
+                {
+                    return false;
+                }
+            }
+
+            return true;
         }
 
         public CachedMediaItem Next()

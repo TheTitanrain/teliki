@@ -62,6 +62,7 @@ namespace Teliki.App
         private bool _settingsOpen;
         private bool _scanRunning;
         private bool _pendingRescan;
+        private bool _displayingContent;
         private long _configGeneration;
         private DateTime _scanStartedUtc;
 
@@ -184,8 +185,13 @@ namespace Teliki.App
             _scanRunning = false;
             if (completion.Generation == _configGeneration)
             {
+                var needsImmediateAdvance = !_displayingContent && completion.Manifest.Items.Count > 0;
                 _runtime.ApplyPlaylist(completion.Manifest);
-                _runtime.AdvancePlayback();
+                _displayingContent = completion.Manifest.Items.Count > 0;
+                if (needsImmediateAdvance)
+                {
+                    _runtime.AdvancePlayback();
+                }
             }
             else
             {

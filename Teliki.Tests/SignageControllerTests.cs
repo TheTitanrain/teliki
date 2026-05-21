@@ -11,6 +11,41 @@ namespace Teliki.Tests
     public class SignageControllerTests
     {
         [TestMethod]
+        public void OnScanCompleted_FirstScanWithContent_AdvancesImmediately()
+        {
+            var controller = CreateController();
+            var manifest = new PlaylistManifest(new[] { new CachedMediaItem("a", "a.jpg", MediaKind.Image) });
+
+            controller.CompleteScan(0, manifest);
+
+            Assert.AreEqual(1, controller.Runtime.AdvanceCalls);
+        }
+
+        [TestMethod]
+        public void OnScanCompleted_SubsequentScanWithSameContent_DoesNotAdvance()
+        {
+            var controller = CreateController();
+            var manifest = new PlaylistManifest(new[] { new CachedMediaItem("a", "a.jpg", MediaKind.Image) });
+
+            controller.CompleteScan(0, manifest);
+            controller.CompleteScan(0, manifest);
+
+            Assert.AreEqual(1, controller.Runtime.AdvanceCalls);
+        }
+
+        [TestMethod]
+        public void OnScanCompleted_ContentAppearsAfterEmpty_AdvancesImmediately()
+        {
+            var controller = CreateController();
+
+            controller.CompleteScan(0, PlaylistManifest.Empty);
+            var manifest = new PlaylistManifest(new[] { new CachedMediaItem("a", "a.jpg", MediaKind.Image) });
+            controller.CompleteScan(0, manifest);
+
+            Assert.AreEqual(1, controller.Runtime.AdvanceCalls);
+        }
+
+        [TestMethod]
         public void ApplyConfig_UpdatesExistingTimerIntervals()
         {
             var controller = CreateController();
@@ -161,9 +196,11 @@ namespace Teliki.Tests
             public readonly List<PlaylistManifest> AppliedPlaylists = new List<PlaylistManifest>();
             public int RestoreCalls;
             public int ExitCalls;
+            public int AdvanceCalls;
 
             public void AdvancePlayback()
             {
+                AdvanceCalls++;
             }
 
             public void ApplyPlaylist(PlaylistManifest manifest)
