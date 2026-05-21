@@ -47,7 +47,7 @@ namespace Teliki.App
             MaximizeBox = false;
             ShowInTaskbar = false;
             AutoScaleMode = AutoScaleMode.Font;
-            ClientSize = new Size(660, 500);
+            ClientSize = new Size(660, 450);
             _cursorScope = CursorVisibilityManager.Shared.ShowCursorWhileModalUiOpen();
 
             ConfigureControls(settings);
@@ -528,5 +528,23 @@ namespace Teliki.App
                 return Text;
             }
         }
-    }
+
+		private void InitializeComponent()
+		{
+			this.SuspendLayout();
+			// 
+			// SettingsForm
+			// 
+			this.ClientSize = new System.Drawing.Size(284, 261);
+			this.Name = "SettingsForm";
+			this.Load += new System.EventHandler(this.SettingsForm_Load);
+			this.ResumeLayout(false);
+
+		}
+
+		private void SettingsForm_Load(object sender, EventArgs e)
+		{
+
+		}
+	}
 }
