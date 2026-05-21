@@ -200,6 +200,24 @@ namespace Teliki.App
             }
         }
 
+        public void OpenAbout(DisplayForm owner)
+        {
+            if (!_controller.TryOpenAbout())
+                return;
+
+            try
+            {
+                using (var form = new AboutForm())
+                {
+                    form.ShowDialog(owner);
+                }
+            }
+            finally
+            {
+                _controller.CloseModalUi();
+            }
+        }
+
         private void OnFormClosed(object sender, FormClosedEventArgs e)
         {
             if (_rebuildingDisplays)

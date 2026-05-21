@@ -99,6 +99,12 @@ namespace Teliki.App
             {
                 if (keyData == Keys.F1)
                 {
+                    _commandTarget.OpenAbout(this);
+                    return true;
+                }
+
+                if (keyData == Keys.F2)
+                {
                     _commandTarget.OpenSettings(this);
                     return true;
                 }
@@ -199,6 +205,7 @@ namespace Teliki.App
     {
         bool ArePlaybackHotkeysEnabled { get; }
         void OpenSettings(DisplayForm owner);
+        void OpenAbout(DisplayForm owner);
         void ExitApplication();
     }
 

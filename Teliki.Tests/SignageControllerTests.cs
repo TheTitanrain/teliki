@@ -102,6 +102,33 @@ namespace Teliki.Tests
         }
 
         [TestMethod]
+        public void TryOpenAbout_AllowsOnlyOneModalInstance()
+        {
+            var controller = CreateController();
+
+            Assert.IsTrue(controller.Controller.TryOpenAbout());
+            Assert.IsFalse(controller.Controller.TryOpenAbout());
+        }
+
+        [TestMethod]
+        public void TryOpenAbout_BlockedWhileSettingsOpen()
+        {
+            var controller = CreateController();
+
+            Assert.IsTrue(controller.TryOpenSettings());
+            Assert.IsFalse(controller.Controller.TryOpenAbout());
+        }
+
+        [TestMethod]
+        public void TryOpenSettings_BlockedWhileAboutOpen()
+        {
+            var controller = CreateController();
+
+            Assert.IsTrue(controller.Controller.TryOpenAbout());
+            Assert.IsFalse(controller.TryOpenSettings());
+        }
+
+        [TestMethod]
         public void SaveSettings_WriteFailureLeavesRuntimeStateUnchanged()
         {
             var runtime = new RecordingRuntime();

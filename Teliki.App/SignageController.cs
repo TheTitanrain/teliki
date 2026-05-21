@@ -59,7 +59,6 @@ namespace Teliki.App
         private readonly Func<DateTime> _utcNow;
         private AppConfig _currentConfig;
         private bool _modalUiOpen;
-        private bool _settingsOpen;
         private bool _scanRunning;
         private bool _pendingRescan;
         private bool _displayingContent;
@@ -207,19 +206,26 @@ namespace Teliki.App
 
         public bool TryOpenSettings()
         {
-            if (_settingsOpen)
+            if (_modalUiOpen)
             {
                 return false;
             }
 
-            _settingsOpen = true;
+            _modalUiOpen = true;
+            return true;
+        }
+
+        public bool TryOpenAbout()
+        {
+            if (_modalUiOpen)
+                return false;
+
             _modalUiOpen = true;
             return true;
         }
 
         public void CloseModalUi(bool restoreFullscreen = true)
         {
-            _settingsOpen = false;
             _modalUiOpen = false;
             if (restoreFullscreen)
             {
