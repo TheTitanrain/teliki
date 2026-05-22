@@ -1,7 +1,9 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Text.RegularExpressions;
 
 namespace Teliki.Core
 {
@@ -40,6 +42,7 @@ namespace Teliki.Core
         public string OriginalName { get; private set; }
         public MediaKind Kind { get; private set; }
         public int FailureCount { get; private set; }
+        public TimeSpan? Duration { get; private set; }
 
         public CachedMediaItem(string cachedPath, string originalName, MediaKind kind)
             : this(cachedPath, originalName, kind, 0)
@@ -52,6 +55,7 @@ namespace Teliki.Core
             OriginalName = originalName;
             Kind = kind;
             FailureCount = failureCount;
+            Duration = MediaFilenameParser.ParseDuration(originalName);
         }
     }
 
@@ -93,6 +97,30 @@ namespace Teliki.Core
         public PlaylistManifest(IEnumerable<CachedMediaItem> items)
         {
             Items = items.ToList().AsReadOnly();
+        }
+    }
+
+    public static class MediaFilenameParser
+    {
+        private static readonly Regex DurationPattern = new Regex(
+            @"_(\d+)s$",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        public static TimeSpan? ParseDuration(string originalName)
+        {
+            if (string.IsNullOrEmpty(originalName))
+                return null;
+
+            var stem = Path.GetFileNameWithoutExtension(originalName);
+            var match = DurationPattern.Match(stem);
+            if (!match.Success)
+                return null;
+
+            int seconds;
+            if (!int.TryParse(match.Groups[1].Value, NumberStyles.None, CultureInfo.InvariantCulture, out seconds))
+                return null;
+
+            return seconds >= 1 ? TimeSpan.FromSeconds(seconds) : (TimeSpan?)null;
         }
     }
 
