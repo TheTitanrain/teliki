@@ -25,6 +25,7 @@ namespace Teliki.App
         private readonly Button _exitButton = new Button();
         private readonly Button _browseButton = new Button();
         private readonly Label _screenHelperLabel = new Label();
+        private readonly CheckBox _autostartCheckBox = new CheckBox();
         private readonly IDisposable _cursorScope;
         private bool _dirty;
         private bool _initializing;
@@ -47,7 +48,7 @@ namespace Teliki.App
             MaximizeBox = false;
             ShowInTaskbar = false;
             AutoScaleMode = AutoScaleMode.Font;
-            ClientSize = new Size(660, 450);
+            ClientSize = new Size(660, 520);
             _cursorScope = CursorVisibilityManager.Shared.ShowCursorWhileModalUiOpen();
 
             ConfigureControls(settings);
@@ -65,6 +66,7 @@ namespace Teliki.App
         internal bool IsDirty { get { return _dirty; } }
         internal string ScreenHelperText { get { return _screenHelperLabel.Text; } }
         internal bool HasScreenHelperLabel { get { return _screenHelperLabel.Parent != null; } }
+        internal bool IsAutostartChecked { get { return _autostartCheckBox.Checked; } }
 
         protected override void Dispose(bool disposing)
         {
@@ -92,6 +94,12 @@ namespace Teliki.App
             ConfigureScreens(settings.ScreenIndex);
             ConfigureScreenHelperLabel();
             ApplyScreenSelectorState();
+
+            _autostartCheckBox.Name = "AutostartCheckBox";
+            _autostartCheckBox.Text = "Start automatically with Windows";
+            _autostartCheckBox.AutoSize = true;
+            _autostartCheckBox.Checked = AutostartManager.IsEnabled();
+            _autostartCheckBox.CheckedChanged += delegate { MarkDirty(); };
 
             _browseButton.Name = "BrowseButton";
             _browseButton.Text = "Browse...";
@@ -196,14 +204,15 @@ namespace Teliki.App
             layout.AutoSize = true;
             layout.AutoSizeMode = AutoSizeMode.GrowAndShrink;
             layout.ColumnCount = 1;
-            layout.RowCount = 5;
+            layout.RowCount = 6;
             layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
 
             layout.Controls.Add(BuildHeader(), 0, 0);
             layout.Controls.Add(BuildMediaSection(), 0, 1);
             layout.Controls.Add(BuildPlaybackSection(), 0, 2);
             layout.Controls.Add(BuildDisplaySection(), 0, 3);
-            layout.Controls.Add(BuildFooter(), 0, 4);
+            layout.Controls.Add(BuildSystemSection(), 0, 4);
+            layout.Controls.Add(BuildFooter(), 0, 5);
 
             return layout;
         }
@@ -279,6 +288,18 @@ namespace Teliki.App
             AddRow(layout, 1, "Target screen", _screenComboBox, null);
             layout.Controls.Add(_screenHelperLabel, 1, 2);
 
+            group.Controls.Add(layout);
+            return group;
+        }
+
+        private Control BuildSystemSection()
+        {
+            var group = CreateGroupBox("System");
+            var layout = CreateSectionLayout(1);
+            layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+            layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+            _autostartCheckBox.Margin = new Padding(0, 4, 0, 4);
+            layout.Controls.Add(_autostartCheckBox, 0, 0);
             group.Controls.Add(layout);
             return group;
         }
@@ -402,6 +423,11 @@ namespace Teliki.App
 
             if (_saveHandler(settings))
             {
+                if (_autostartCheckBox.Checked)
+                    AutostartManager.Enable(Application.ExecutablePath);
+                else
+                    AutostartManager.Disable();
+
                 _dirty = false;
                 DialogResult = DialogResult.OK;
                 Close();
