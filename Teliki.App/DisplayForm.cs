@@ -9,6 +9,8 @@ namespace Teliki.App
 {
     internal sealed class DisplayForm : Form, IMediaRenderer
     {
+        public event EventHandler VideoPlaybackCompleted;
+
         private readonly IDisplayCommandTarget _commandTarget;
         private readonly DisplayScreen _screen;
         private readonly ILogger _logger;
@@ -43,6 +45,7 @@ namespace Teliki.App
             Deactivate += delegate { RestoreFullscreen(); };
             Resize += delegate { RestoreFullscreen(); };
             Move += delegate { RestoreFullscreen(); };
+            _wmpHost.PlaybackCompleted += delegate { var h = VideoPlaybackCompleted; if (h != null) h(this, EventArgs.Empty); };
         }
 
         public void SetMuted(bool muted)
@@ -219,9 +222,26 @@ namespace Teliki.App
 
     internal sealed class WmpHost : AxHost
     {
+        public event EventHandler PlaybackCompleted;
+        private readonly System.Windows.Forms.Timer _pollTimer;
+        private bool _wasPlaying;
+
         public WmpHost()
             : base("6BF52A52-394A-11d3-B153-00C04F79FAA6")
         {
+            _pollTimer = new System.Windows.Forms.Timer();
+            _pollTimer.Interval = 500;
+            _pollTimer.Tick += OnPollTick;
+        }
+
+        protected override void Dispose(bool disposing)
+        {
+            if (disposing)
+            {
+                _pollTimer.Stop();
+                _pollTimer.Dispose();
+            }
+            base.Dispose(disposing);
         }
 
         public void SetMuted(bool muted)
@@ -248,10 +268,15 @@ namespace Teliki.App
             }
 
             SetProperty(ocx, "URL", path);
+            _wasPlaying = false;
+            _pollTimer.Stop();
+            _pollTimer.Start();
         }
 
         public void Stop()
         {
+            _pollTimer.Stop();
+            _wasPlaying = false;
             var ocx = GetOcx();
             if (ocx == null)
             {
@@ -262,6 +287,28 @@ namespace Teliki.App
             if (controls != null)
             {
                 controls.GetType().InvokeMember("stop", BindingFlags.InvokeMethod, null, controls, null);
+            }
+        }
+
+        private void OnPollTick(object sender, EventArgs e)
+        {
+            try
+            {
+                var ocx = GetOcx();
+                if (ocx == null) return;
+                var state = Convert.ToInt32(GetProperty(ocx, "playState"));
+                if (state == 3) { _wasPlaying = true; }
+                if (_wasPlaying && (state == 1 || state == 8))
+                {
+                    _pollTimer.Stop();
+                    _wasPlaying = false;
+                    var handler = PlaybackCompleted;
+                    if (handler != null) { handler(this, EventArgs.Empty); }
+                }
+            }
+            catch
+            {
+                // COM access can fail during disposal; swallow silently
             }
         }
 

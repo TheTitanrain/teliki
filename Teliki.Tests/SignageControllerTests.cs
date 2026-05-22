@@ -11,6 +11,23 @@ namespace Teliki.Tests
     public class SignageControllerTests
     {
         [TestMethod]
+        public void SetNextInterval_WithDuration_UpdatesTimerInterval()
+        {
+            var controller = CreateController();
+            controller.SetNextInterval(TimeSpan.FromSeconds(30));
+            Assert.AreEqual(30000, controller.AdvanceTimer.Interval);
+            Assert.IsTrue(controller.AdvanceTimer.StartCalls >= 1);
+        }
+
+        [TestMethod]
+        public void SetNextInterval_WithNullDuration_UsesConfigInterval()
+        {
+            var controller = CreateController();
+            controller.SetNextInterval(null);
+            Assert.AreEqual(15000, controller.AdvanceTimer.Interval);
+        }
+
+        [TestMethod]
         public void OnScanCompleted_FirstScanWithContent_AdvancesImmediately()
         {
             var controller = CreateController();
@@ -206,6 +223,7 @@ namespace Teliki.Tests
             public void OnWatchdogTick() { Controller.OnWatchdogTick(); }
             public void HandlePlaybackEscape() { Controller.HandlePlaybackEscape(); }
             public void CloseModalUi() { Controller.CloseModalUi(); }
+            public void SetNextInterval(TimeSpan? duration) { Controller.SetNextInterval(duration); }
         }
 
         private sealed class FakeTimer : IAppTimer

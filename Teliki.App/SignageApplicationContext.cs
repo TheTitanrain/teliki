@@ -108,6 +108,11 @@ namespace Teliki.App
         public void AdvancePlayback()
         {
             _currentItemSnapshot = _displayCoordinator.Advance();
+            if (_currentItemSnapshot != null && _currentItemSnapshot.Kind != MediaKind.Video)
+            {
+                _controller.SetNextInterval(_currentItemSnapshot.Duration);
+            }
+            // Video timer pause handled in Task 6
         }
 
         public void RestoreFullscreen()

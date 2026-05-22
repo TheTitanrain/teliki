@@ -62,6 +62,7 @@ namespace Teliki.App
         private bool _scanRunning;
         private bool _pendingRescan;
         private bool _displayingContent;
+        private bool _isVideoPlaying;
         private long _configGeneration;
         private DateTime _scanStartedUtc;
 
@@ -147,6 +148,7 @@ namespace Teliki.App
 
         public void ApplyConfig(AppConfig newConfig)
         {
+            _isVideoPlaying = false;
             AdvanceTimer.Stop();
             ScanTimer.Stop();
             WatchdogTimer.Stop();
@@ -178,6 +180,13 @@ namespace Teliki.App
             _scanRunning = true;
             _scanStartedUtc = _utcNow();
             _scanRunner.Start(new ScanRequest(_currentConfig, _configGeneration));
+        }
+
+        public void SetNextInterval(TimeSpan? itemDuration)
+        {
+            var interval = itemDuration ?? _currentConfig.Interval;
+            AdvanceTimer.Interval = ToTimerInterval(interval);
+            AdvanceTimer.Start();
         }
 
         public void OnScanCompleted(ScanCompletion completion)
