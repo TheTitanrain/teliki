@@ -16,6 +16,7 @@ namespace Teliki.App
         private readonly WmpHost _wmpHost = new WmpHost();
         private Image _currentImage;
         private MemoryStream _currentImageStream;
+        private bool _muted = true;
 
         public DisplayForm(DisplayScreen screen, ILogger logger, IDisplayCommandTarget commandTarget)
         {
@@ -42,6 +43,12 @@ namespace Teliki.App
             Deactivate += delegate { RestoreFullscreen(); };
             Resize += delegate { RestoreFullscreen(); };
             Move += delegate { RestoreFullscreen(); };
+        }
+
+        public void SetMuted(bool muted)
+        {
+            _muted = muted;
+            _wmpHost.SetMuted(muted);
         }
 
         public void RestoreFullscreen()
@@ -159,6 +166,7 @@ namespace Teliki.App
 
             try
             {
+                _wmpHost.SetMuted(_muted);
                 _wmpHost.Play(path);
             }
             catch (Exception ex)
@@ -214,6 +222,17 @@ namespace Teliki.App
         public WmpHost()
             : base("6BF52A52-394A-11d3-B153-00C04F79FAA6")
         {
+        }
+
+        public void SetMuted(bool muted)
+        {
+            var ocx = GetOcx();
+            if (ocx == null) return;
+            var settings = GetProperty(ocx, "settings");
+            if (settings != null)
+            {
+                SetProperty(settings, "mute", muted);
+            }
         }
 
         public void Play(string path)

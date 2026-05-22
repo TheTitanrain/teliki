@@ -26,6 +26,7 @@ namespace Teliki.App
         private readonly Button _browseButton = new Button();
         private readonly Label _screenHelperLabel = new Label();
         private readonly CheckBox _autostartCheckBox = new CheckBox();
+        private readonly CheckBox _muteCheckBox = new CheckBox();
         private readonly IDisposable _cursorScope;
         private bool _dirty;
         private bool _initializing;
@@ -67,6 +68,7 @@ namespace Teliki.App
         internal string ScreenHelperText { get { return _screenHelperLabel.Text; } }
         internal bool HasScreenHelperLabel { get { return _screenHelperLabel.Parent != null; } }
         internal bool IsAutostartChecked { get { return _autostartCheckBox.Checked; } }
+        internal bool IsMuteChecked { get { return _muteCheckBox.Checked; } }
 
         protected override void Dispose(bool disposing)
         {
@@ -100,6 +102,12 @@ namespace Teliki.App
             _autostartCheckBox.AutoSize = true;
             _autostartCheckBox.Checked = AutostartManager.IsEnabled();
             _autostartCheckBox.CheckedChanged += delegate { MarkDirty(); };
+
+            _muteCheckBox.Name = "MuteCheckBox";
+            _muteCheckBox.Text = "Mute audio during playback";
+            _muteCheckBox.AutoSize = true;
+            _muteCheckBox.Checked = settings.Muted;
+            _muteCheckBox.CheckedChanged += delegate { MarkDirty(); };
 
             _browseButton.Name = "BrowseButton";
             _browseButton.Text = "Browse...";
@@ -298,8 +306,11 @@ namespace Teliki.App
             var layout = CreateSectionLayout(1);
             layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
             layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+            layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
             _autostartCheckBox.Margin = new Padding(0, 4, 0, 4);
             layout.Controls.Add(_autostartCheckBox, 0, 0);
+            _muteCheckBox.Margin = new Padding(0, 4, 0, 4);
+            layout.Controls.Add(_muteCheckBox, 0, 1);
             group.Controls.Add(layout);
             return group;
         }
@@ -413,7 +424,8 @@ namespace Teliki.App
                 (int)_scanIntervalNumeric.Value,
                 (int)_scanTimeoutNumeric.Value,
                 GetSelectedScreenMode(),
-                _selectedScreenIndex);
+                _selectedScreenIndex,
+                _muteCheckBox.Checked);
             var errors = SettingsValidator.Validate(settings);
             if (errors.Count > 0)
             {

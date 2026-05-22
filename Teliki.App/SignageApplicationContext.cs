@@ -197,6 +197,10 @@ namespace Teliki.App
                     _pendingDisplayRefresh = false;
                     RebuildDisplayForms(_controller.CurrentConfig, true);
                 }
+                else
+                {
+                    ApplyMuteToForms(_controller.CurrentConfig.Muted);
+                }
             }
         }
 
@@ -264,6 +268,7 @@ namespace Teliki.App
             foreach (var screen in selection.Screens)
             {
                 var form = new DisplayForm(screen, _logger, this);
+                form.SetMuted(config.Muted);
                 form.FormClosed += OnFormClosed;
                 nextForms.Add(form);
             }
@@ -301,6 +306,17 @@ namespace Teliki.App
             finally
             {
                 _rebuildingDisplays = false;
+            }
+        }
+
+        private void ApplyMuteToForms(bool muted)
+        {
+            foreach (var form in _forms)
+            {
+                if (!form.IsDisposed)
+                {
+                    form.SetMuted(muted);
+                }
             }
         }
 
@@ -356,7 +372,8 @@ namespace Teliki.App
                 settings.ScanIntervalSeconds,
                 settings.ScanTimeoutSeconds,
                 DisplayModeParser.Canonicalize(settings.ScreenMode),
-                screenIndex);
+                screenIndex,
+                settings.Muted);
         }
     }
 }

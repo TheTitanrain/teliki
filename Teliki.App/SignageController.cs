@@ -117,7 +117,8 @@ namespace Teliki.App
                     (int)_currentConfig.ScanInterval.TotalSeconds,
                     (int)_currentConfig.ScanTimeout.TotalSeconds,
                     _currentConfig.ScreenMode,
-                    _currentConfig.ScreenIndex);
+                    _currentConfig.ScreenIndex,
+                    _currentConfig.Muted);
             }
 
             return _configStore.Load(_configPath).GetEditableSettings();
