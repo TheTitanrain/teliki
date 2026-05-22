@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics;
 using System.Drawing;
 using System.Reflection;
 using System.Windows.Forms;
@@ -18,7 +19,7 @@ namespace Teliki.App
             MaximizeBox = false;
             ShowInTaskbar = false;
             AutoScaleMode = AutoScaleMode.Font;
-            ClientSize = new Size(360, 160);
+            ClientSize = new Size(360, 185);
             _cursorScope = CursorVisibilityManager.Shared.ShowCursorWhileModalUiOpen();
 
             var assembly = Assembly.GetExecutingAssembly();
@@ -32,7 +33,7 @@ namespace Teliki.App
                 Dock = DockStyle.Fill,
                 Padding = new Padding(20),
                 ColumnCount = 1,
-                RowCount = 4
+                RowCount = 5
             };
             layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
 
@@ -55,8 +56,18 @@ namespace Teliki.App
             {
                 Text = "© " + DateTime.Now.Year,
                 AutoSize = true,
-                Margin = new Padding(0, 0, 0, 16)
+                Margin = new Padding(0, 0, 0, 4)
             }, 0, 2);
+
+            var siteLink = new LinkLabel
+            {
+                Text = "thetitanrain.github.io/teliki",
+                AutoSize = true,
+                Margin = new Padding(0, 0, 0, 16)
+            };
+            siteLink.LinkClicked += (s, e) =>
+                Process.Start(new ProcessStartInfo("https://thetitanrain.github.io/teliki/") { UseShellExecute = true });
+            layout.Controls.Add(siteLink, 0, 3);
 
             var okButton = new Button
             {
@@ -66,7 +77,7 @@ namespace Teliki.App
                 MinimumSize = new Size(80, 0),
                 Anchor = AnchorStyles.None
             };
-            layout.Controls.Add(okButton, 0, 3);
+            layout.Controls.Add(okButton, 0, 4);
             Controls.Add(layout);
             AcceptButton = okButton;
             CancelButton = okButton;
