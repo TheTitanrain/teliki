@@ -243,8 +243,28 @@ namespace Teliki.App
             }
         }
 
+        public void PauseAdvanceForVideo()
+        {
+            _isVideoPlaying = true;
+            AdvanceTimer.Stop();
+        }
+
+        public void OnVideoCompleted()
+        {
+            if (!_isVideoPlaying)
+            {
+                return; // dedup: multi-monitor fires once per renderer; ignore subsequent calls
+            }
+            _isVideoPlaying = false;
+            _runtime.AdvancePlayback();
+        }
+
         public void OnAdvanceTick()
         {
+            if (_isVideoPlaying)
+            {
+                return;
+            }
             _runtime.AdvancePlayback();
         }
 

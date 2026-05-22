@@ -65,6 +65,7 @@ namespace Teliki.App
                 foreach (var form in _forms)
                 {
                     form.FormClosed -= OnFormClosed;
+                    form.VideoPlaybackCompleted -= OnVideoPlaybackCompleted;
                     form.Dispose();
                 }
             }
@@ -108,11 +109,20 @@ namespace Teliki.App
         public void AdvancePlayback()
         {
             _currentItemSnapshot = _displayCoordinator.Advance();
-            if (_currentItemSnapshot != null && _currentItemSnapshot.Kind != MediaKind.Video)
+            if (_currentItemSnapshot != null && _currentItemSnapshot.Kind == MediaKind.Video)
             {
-                _controller.SetNextInterval(_currentItemSnapshot.Duration);
+                _controller.PauseAdvanceForVideo();
             }
-            // Video timer pause handled in Task 6
+            else
+            {
+                _controller.SetNextInterval(_currentItemSnapshot?.Duration);
+            }
+        }
+
+        private void OnVideoPlaybackCompleted(object sender, EventArgs e)
+        {
+            // Called on UI thread (WmpHost uses WinForms Timer)
+            _controller.OnVideoCompleted();
         }
 
         public void RestoreFullscreen()
@@ -275,6 +285,7 @@ namespace Teliki.App
                 var form = new DisplayForm(screen, _logger, this);
                 form.SetMuted(config.Muted);
                 form.FormClosed += OnFormClosed;
+                form.VideoPlaybackCompleted += OnVideoPlaybackCompleted;
                 nextForms.Add(form);
             }
 
@@ -298,6 +309,7 @@ namespace Teliki.App
                 foreach (var form in previousForms)
                 {
                     form.FormClosed -= OnFormClosed;
+                    form.VideoPlaybackCompleted -= OnVideoPlaybackCompleted;
                     if (!form.IsDisposed)
                     {
                         form.Close();

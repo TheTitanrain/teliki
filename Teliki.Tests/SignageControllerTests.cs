@@ -11,6 +11,48 @@ namespace Teliki.Tests
     public class SignageControllerTests
     {
         [TestMethod]
+        public void PauseAdvanceForVideo_StopsAdvanceTimer()
+        {
+            var controller = CreateController();
+            controller.PauseAdvanceForVideo();
+            Assert.IsTrue(controller.AdvanceTimer.StopCalls >= 1);
+        }
+
+        [TestMethod]
+        public void OnVideoCompleted_WithPausedVideo_CallsAdvancePlayback()
+        {
+            var controller = CreateController();
+            controller.PauseAdvanceForVideo();
+
+            controller.OnVideoCompleted();
+
+            Assert.AreEqual(1, controller.Runtime.AdvanceCalls);
+        }
+
+        [TestMethod]
+        public void OnVideoCompleted_WhenCalledTwice_AdvancesOnlyOnce()
+        {
+            var controller = CreateController();
+            controller.PauseAdvanceForVideo();
+
+            controller.OnVideoCompleted();
+            controller.OnVideoCompleted();
+
+            Assert.AreEqual(1, controller.Runtime.AdvanceCalls);
+        }
+
+        [TestMethod]
+        public void OnAdvanceTick_WhenVideoPlaying_IsIgnored()
+        {
+            var controller = CreateController();
+            controller.PauseAdvanceForVideo();
+
+            controller.OnAdvanceTick();
+
+            Assert.AreEqual(0, controller.Runtime.AdvanceCalls);
+        }
+
+        [TestMethod]
         public void SetNextInterval_WithDuration_UpdatesTimerInterval()
         {
             var controller = CreateController();
@@ -224,6 +266,9 @@ namespace Teliki.Tests
             public void HandlePlaybackEscape() { Controller.HandlePlaybackEscape(); }
             public void CloseModalUi() { Controller.CloseModalUi(); }
             public void SetNextInterval(TimeSpan? duration) { Controller.SetNextInterval(duration); }
+            public void PauseAdvanceForVideo() { Controller.PauseAdvanceForVideo(); }
+            public void OnVideoCompleted() { Controller.OnVideoCompleted(); }
+            public void OnAdvanceTick() { Controller.OnAdvanceTick(); }
         }
 
         private sealed class FakeTimer : IAppTimer
