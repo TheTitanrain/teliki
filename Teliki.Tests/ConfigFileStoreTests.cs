@@ -54,6 +54,22 @@ namespace Teliki.Tests
             StringAssert.Contains(saved, "ScreenIndex=2");
         }
 
+        [TestMethod]
+        public void Save_MutedFalseSurvivesRoundTrip()
+        {
+            var root = TestDirectory.Create();
+            var path = System.IO.Path.Combine(root.Path, "appsettings.ini");
+            System.IO.File.WriteAllText(path, "Muted=false\r\n");
+            var store = new ConfigFileStore(new PhysicalFileSystem());
+
+            var document = store.Load(path);
+            document.SetEditableSettings(new EditableSettings("media", 10, 5, 30, DisplayModeParser.AllScreens, 0, false));
+            store.Save(path, document);
+
+            var saved = System.IO.File.ReadAllText(path);
+            StringAssert.Contains(saved, "Muted=false");
+        }
+
         private static int CountOccurrences(string text, string value)
         {
             var count = 0;

@@ -10,7 +10,8 @@ namespace Teliki.Core
             int scanIntervalSeconds,
             int scanTimeoutSeconds,
             string screenMode,
-            int screenIndex)
+            int screenIndex,
+            bool muted = true)
         {
             MediaFolder = mediaFolder;
             IntervalSeconds = intervalSeconds;
@@ -18,6 +19,7 @@ namespace Teliki.Core
             ScanTimeoutSeconds = scanTimeoutSeconds;
             ScreenMode = screenMode;
             ScreenIndex = screenIndex;
+            Muted = muted;
         }
 
         public string MediaFolder { get; private set; }
@@ -26,6 +28,7 @@ namespace Teliki.Core
         public int ScanTimeoutSeconds { get; private set; }
         public string ScreenMode { get; private set; }
         public int ScreenIndex { get; private set; }
+        public bool Muted { get; private set; }
     }
 
     public static class SettingsValidator

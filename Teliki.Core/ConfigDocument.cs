@@ -37,7 +37,8 @@ namespace Teliki.Core
                 GetInt("ScanIntervalSeconds", 5),
                 GetInt("ScanTimeoutSeconds", 30),
                 GetValue("ScreenMode", DisplayModeParser.AllScreens),
-                GetInt("ScreenIndex", 0));
+                GetInt("ScreenIndex", 0),
+                GetBool("Muted", true));
         }
 
         public void SetEditableSettings(EditableSettings settings)
@@ -48,6 +49,7 @@ namespace Teliki.Core
             SetValue("ScanTimeoutSeconds", settings.ScanTimeoutSeconds.ToString(CultureInfo.InvariantCulture));
             SetValue("ScreenMode", settings.ScreenMode);
             SetValue("ScreenIndex", settings.ScreenIndex.ToString(CultureInfo.InvariantCulture));
+            SetValue("Muted", settings.Muted ? "true" : "false");
         }
 
         public override string ToString()
@@ -75,6 +77,13 @@ namespace Teliki.Core
             return int.TryParse(GetValue(key, defaultValue.ToString(CultureInfo.InvariantCulture)), NumberStyles.Integer, CultureInfo.InvariantCulture, out value)
                 ? value
                 : defaultValue;
+        }
+
+        private bool GetBool(string key, bool defaultValue)
+        {
+            var value = GetValue(key, null);
+            if (value == null) return defaultValue;
+            return string.Equals(value, "true", StringComparison.OrdinalIgnoreCase);
         }
 
         private void SetValue(string key, string value)

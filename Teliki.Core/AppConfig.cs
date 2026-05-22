@@ -14,6 +14,7 @@ namespace Teliki.Core
         public string ScreenMode { get; private set; }
         public int ScreenIndex { get; private set; }
         public DisplayTargetMode DisplayMode { get; private set; }
+        public bool Muted { get; private set; }
 
         public AppConfig(
             string mediaFolder,
@@ -24,7 +25,8 @@ namespace Teliki.Core
             int maxCacheSizeMb,
             int minFreeDiskMb,
             string screenMode,
-            int screenIndex)
+            int screenIndex,
+            bool muted = true)
         {
             MediaFolder = mediaFolder;
             Interval = interval;
@@ -36,6 +38,7 @@ namespace Teliki.Core
             ScreenMode = screenMode;
             ScreenIndex = screenIndex;
             DisplayMode = DisplayModeParser.Parse(screenMode);
+            Muted = muted;
         }
     }
 }

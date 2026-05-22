@@ -58,5 +58,34 @@ namespace Teliki.Tests
             Assert.AreEqual(DisplayTargetMode.AllScreens, config.DisplayMode);
             Assert.AreEqual(3, config.ScreenIndex);
         }
+
+        [TestMethod]
+        public void LoadFromText_MutedDefaultsToTrue()
+        {
+            var config = ConfigLoader.LoadFromText(string.Empty);
+            Assert.IsTrue(config.Muted);
+        }
+
+        [TestMethod]
+        public void LoadFromText_MutedFalseIsRespected()
+        {
+            var config = ConfigLoader.LoadFromText("Muted=false");
+            Assert.IsFalse(config.Muted);
+        }
+
+        [TestMethod]
+        public void LoadFromText_MutedTrueIsRespected()
+        {
+            var config = ConfigLoader.LoadFromText("Muted=true");
+            Assert.IsTrue(config.Muted);
+        }
+
+        [TestMethod]
+        public void Normalize_PreservesMutedFalse()
+        {
+            var config = ConfigLoader.LoadFromText("Muted=false");
+            var normalized = AppConfigNormalizer.Normalize(config, "C:\\base");
+            Assert.IsFalse(normalized.Muted);
+        }
     }
 }

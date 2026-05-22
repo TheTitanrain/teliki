@@ -27,7 +27,8 @@ namespace Teliki.Core
                 Math.Max(1, GetInt(values, "MaxCacheSizeMb", 1024)),
                 Math.Max(0, GetInt(values, "MinFreeDiskMb", 512)),
                 Get(values, "ScreenMode", DisplayModeParser.AllScreens),
-                GetInt(values, "ScreenIndex", 0));
+                GetInt(values, "ScreenIndex", 0),
+                GetBool(values, "Muted", true));
         }
 
         private static Dictionary<string, string> Parse(string text)
@@ -74,6 +75,14 @@ namespace Teliki.Core
             return values.TryGetValue(key, out value) &&
                    int.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out parsed)
                 ? parsed
+                : defaultValue;
+        }
+
+        private static bool GetBool(Dictionary<string, string> values, string key, bool defaultValue)
+        {
+            string value;
+            return values.TryGetValue(key, out value)
+                ? string.Equals(value, "true", StringComparison.OrdinalIgnoreCase)
                 : defaultValue;
         }
 
